@@ -1,0 +1,24 @@
+[package]
+name = "lolibaso-macros"
+version = "0.1.0"
+edition = "2024"
+repository = "https://github.com/liuzsen/lolibaso"
+description = "lolibaso 的过程宏 crate"
+authors = ["liuzsen"]
+license = "Apache-2.0"
+readme = "README.md"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+convert_case = "0.8.0"
+proc-macro-error = "1.0.4"
+proc-macro2 = "1"
+quote = "1"
+syn = { version = "2.0.55", features = [
+    "full",
+    "extra-traits",
+    "visit-mut",
+    "parsing",
+] }
