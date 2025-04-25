@@ -18,14 +18,12 @@ anyhow = "1.0.98"
 lolibaso-macros = { path = "lolibaso-macros", version = "*" }
 serde = { version = "1.0.219", features = ["derive", "rc"] }
 serde_json = "1.0.140"
-tracing = "0.1.41"
-tracing-subscriber = { version = "0.3.19", features = ["env-filter", "chrono"] }
-chrono = "0.4.40"
 linkme = "0.3.32"
+derive_more = { version = "2.0.1", features = ["from", "display", "from_str"] }
 
 [dependencies]
 anyhow.workspace = true
-derive_more = { version = "2.0.1", features = ["from", "display", "from_str"] }
+derive_more.workspace = true
 flaken = "0.2.2"
 http = "1.3.1"
 lolibaso-macros.workspace = true
