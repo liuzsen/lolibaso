@@ -27,7 +27,9 @@ impl JsonParser for SerdeJsonParser {
             Err(e) => {
                 if e.is_data() {
                     let s = e.to_string();
-                    let (err_name, err_msg) = extract_error_name(&s).unwrap();
+                    let Some((err_name, err_msg)) = extract_error_name(&s) else {
+                        return Err(JsonError::InvalidJson(Box::new(e)));
+                    };
                     Err(JsonError::Custom { err_name, err_msg })
                 } else {
                     Err(JsonError::InvalidJson(Box::new(e)))
