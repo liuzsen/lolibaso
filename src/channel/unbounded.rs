@@ -23,9 +23,7 @@ pub trait UnboundedAsyncReceiver<E>: 'static
 where
     E: 'static,
 {
-    fn next_event(
-        &mut self,
-    ) -> impl Future<Output = anyhow::Result<Option<E>>> + Send + Sync + 'static;
+    fn recv(&mut self) -> impl Future<Output = anyhow::Result<Option<E>>> + Send + Sync + 'static;
 }
 
 #[cfg(feature = "tokio")]
