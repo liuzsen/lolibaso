@@ -40,7 +40,6 @@ impl JsonParser for SerdeJsonParser {
 }
 
 fn extract_error_name(s: &str) -> Option<(String, Option<String>)> {
-    // ##InvalidPortNumber(invalid digit found in string)## at line 1 column 10
     let start = s.find("##")? + 2;
     if start >= s.len() {
         return None;
@@ -62,4 +61,22 @@ fn extract_error_name(s: &str) -> Option<(String, Option<String>)> {
     };
 
     Some((err_name.to_string(), err_msg.map(String::from)))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_extract_error_name() {
+        let s = "##InvalidPortNumber(invalid digit found in string)## at line 1 column 10";
+        let (err_name, err_msg) = extract_error_name(s).unwrap();
+        assert_eq!(err_name, "InvalidPortNumber");
+        assert_eq!(err_msg, Some("invalid digit found in string".to_string()));
+
+        let s = "##InvalidPortNumber## at line 1 column 10";
+        let (err_name, err_msg) = extract_error_name(s).unwrap();
+        assert_eq!(err_name, "InvalidPortNumber");
+        assert_eq!(err_msg, None);
+    }
 }
