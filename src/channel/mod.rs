@@ -1,3 +1,4 @@
+pub mod broadcast;
 pub mod unbounded;
 
 pub trait SendError<T>: std::error::Error {
