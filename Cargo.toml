@@ -35,7 +35,13 @@ serde_json.workspace = true
 version = "4"
 optional = true
 
+[dependencies.tokio]
+version = "1"
+features = ["rt", "macros"]
+optional = true
+
 
 [features]
-default = ["actix-web"]
+default = ["actix-web", "tokio"]
 actix-web = ["dep:actix-web"]
+tokio = ["dep:tokio"]

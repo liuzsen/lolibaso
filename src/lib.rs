@@ -1,5 +1,6 @@
 #![allow(async_fn_in_trait)]
 
+pub mod async_runtime;
 pub mod configs;
 pub mod entity;
 pub mod flake_id;
