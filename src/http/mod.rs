@@ -5,5 +5,8 @@ pub mod json;
 pub mod request;
 pub mod response;
 
+#[cfg(feature = "web-socket")]
+pub mod web_socket;
+
 pub use adapter::Adapter;
 pub use response::ApiResponse;
