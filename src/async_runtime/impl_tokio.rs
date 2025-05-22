@@ -75,7 +75,7 @@ impl super::AsyncRuntime for AsyncRuntime {
     fn spawn_local<F>(&self, future: F) -> Self::AsyncTaskHandle<F::Output>
     where
         F: Future + 'static,
-        F::Output: Send + 'static,
+        F::Output: 'static,
     {
         tokio::task::spawn_local(future)
     }

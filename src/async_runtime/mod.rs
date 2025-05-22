@@ -12,7 +12,7 @@ pub enum Either3<R1, R2, R3> {
     R3(R3),
 }
 
-pub trait AsyncRuntime {
+pub trait AsyncRuntime: 'static {
     type AsyncTaskHandle<T>: AsyncTaskHandle<T>;
 
     async fn select<A, B>(&self, f1: A, f2: B) -> Either<A::Output, B::Output>
@@ -39,7 +39,7 @@ pub trait AsyncRuntime {
     fn spawn_local<F>(&self, future: F) -> Self::AsyncTaskHandle<F::Output>
     where
         F: Future + 'static,
-        F::Output: Send + 'static;
+        F::Output: 'static;
 
     fn block_on<F>(&self, future: F) -> F::Output
     where

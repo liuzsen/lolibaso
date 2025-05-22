@@ -1,3 +1,5 @@
+use std::any::Any;
+
 use super::SendError;
 
 pub trait BroadcastAsyncChannelBuilder<E>
@@ -22,11 +24,30 @@ where
     fn subscribe(&self) -> Self::Receiver;
 }
 
-pub trait BroadcastAsyncReceiver<E>: 'static
+pub trait BroadcastAsyncReceiver<E>: 'static + Send + Sync
 where
     E: 'static + Clone,
 {
-    fn recv(&mut self) -> impl Future<Output = Option<E>>;
+    fn recv(&mut self) -> impl Future<Output = Option<E>> + Send + Sync;
+}
+
+#[async_trait::async_trait]
+pub trait BroadcastReceiverAsyncDyn<E>: 'static + Any
+where
+    E: 'static + Clone,
+{
+    async fn recv(&mut self) -> Option<E>;
+}
+
+#[async_trait::async_trait]
+impl<E, T> BroadcastReceiverAsyncDyn<E> for T
+where
+    E: 'static + Clone,
+    T: BroadcastAsyncReceiver<E>,
+{
+    async fn recv(&mut self) -> Option<E> {
+        BroadcastAsyncReceiver::recv(self).await
+    }
 }
 
 #[cfg(feature = "tokio")]
@@ -127,21 +148,19 @@ pub mod impl_tokio {
 
     impl<E> BroadcastAsyncReceiver<E> for BroadcastReceiver<E>
     where
-        E: 'static + Debug + Clone + Send + Sync,
+        E: 'static + Clone + Send + Sync,
     {
-        fn recv(&mut self) -> impl Future<Output = Option<E>> {
+        async fn recv(&mut self) -> Option<E> {
             let recv = self.receiver.recv();
-            async move {
-                let res = recv.await;
-                match res {
-                    Ok(v) => Some(v),
-                    Err(err) => match err {
-                        broadcast::error::RecvError::Closed => None,
-                        broadcast::error::RecvError::Lagged(count) => {
-                            panic!("Broadcast channel lagged by {}. This is a bug.", count);
-                        }
-                    },
-                }
+            let res = recv.await;
+            match res {
+                Ok(v) => Some(v),
+                Err(err) => match err {
+                    broadcast::error::RecvError::Closed => None,
+                    broadcast::error::RecvError::Lagged(count) => {
+                        panic!("Broadcast channel lagged by {}. This is a bug.", count);
+                    }
+                },
             }
         }
     }

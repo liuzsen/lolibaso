@@ -19,16 +19,24 @@ where
     fn send(&self, event: E) -> Result<(), Self::Error>;
 }
 
-pub trait UnboundedAsyncReceiver<E>: 'static
+pub trait UnboundedAsyncReceiver<E>: 'static + Send + Sync
 where
     E: 'static,
 {
-    fn recv(&mut self) -> impl Future<Output = anyhow::Result<Option<E>>> + Send + Sync + 'static;
+    fn recv(&mut self) -> impl Future<Output = Option<E>> + Send + Sync;
 }
 
 #[cfg(feature = "tokio")]
-mod impl_tokio {
+pub mod impl_tokio {
     use super::*;
+
+    pub struct Sender<E> {
+        sender: tokio::sync::mpsc::UnboundedSender<E>,
+    }
+
+    pub struct Receiver<E> {
+        receiver: tokio::sync::mpsc::UnboundedReceiver<E>,
+    }
 
     impl<E> SendError<E> for tokio::sync::mpsc::error::SendError<E> {
         fn unsent_item(self) -> E {
@@ -36,7 +44,7 @@ mod impl_tokio {
         }
     }
 
-    impl<E> UnboundedAsyncSender<E> for tokio::sync::mpsc::UnboundedSender<E>
+    impl<E> UnboundedAsyncSender<E> for Sender<E>
     where
         E: 'static,
     {
@@ -44,7 +52,16 @@ mod impl_tokio {
 
         #[inline]
         fn send(&self, event: E) -> Result<(), Self::Error> {
-            self.send(event)
+            self.sender.send(event)
+        }
+    }
+
+    impl<E> UnboundedAsyncReceiver<E> for Receiver<E>
+    where
+        E: 'static + Send + Sync,
+    {
+        async fn recv(&mut self) -> Option<E> {
+            self.receiver.recv().await
         }
     }
 }

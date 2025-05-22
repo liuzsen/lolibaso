@@ -1,6 +1,6 @@
 use crate::entity::Entity;
 
-pub trait Repository<E: Entity> {
+pub trait Repository<E: Entity>: 'static {
     async fn find(&self, id: &E::SysId) -> anyhow::Result<Option<E>>;
 
     async fn save(&self, entity: &E) -> anyhow::Result<SaveEffect>;
