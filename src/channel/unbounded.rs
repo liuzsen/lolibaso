@@ -1,16 +1,16 @@
 use super::SendError;
 
-pub trait UnboundedAsyncChannelBuilder<E>
+pub trait UnboundedChannelBuilderAsync<E>
 where
     E: 'static,
 {
-    type Sender: UnboundedAsyncSender<E>;
-    type Receiver: UnboundedAsyncReceiver<E>;
+    type Sender: UnboundedSenderAsync<E>;
+    type Receiver: UnboundedReceiverAsync<E>;
 
     fn chan(&self) -> (Self::Sender, Self::Receiver);
 }
 
-pub trait UnboundedAsyncSender<E>: 'static
+pub trait UnboundedSenderAsync<E>: 'static
 where
     E: 'static,
 {
@@ -19,7 +19,7 @@ where
     fn send(&self, event: E) -> Result<(), Self::Error>;
 }
 
-pub trait UnboundedAsyncReceiver<E>: 'static + Send + Sync
+pub trait UnboundedReceiverAsync<E>: 'static + Send + Sync
 where
     E: 'static,
 {
@@ -30,11 +30,11 @@ where
 pub mod impl_tokio {
     use super::*;
 
-    pub struct Sender<E> {
+    pub struct UnboundedSender<E> {
         sender: tokio::sync::mpsc::UnboundedSender<E>,
     }
 
-    pub struct Receiver<E> {
+    pub struct UnboundedReceiver<E> {
         receiver: tokio::sync::mpsc::UnboundedReceiver<E>,
     }
 
@@ -44,7 +44,7 @@ pub mod impl_tokio {
         }
     }
 
-    impl<E> UnboundedAsyncSender<E> for Sender<E>
+    impl<E> UnboundedSenderAsync<E> for UnboundedSender<E>
     where
         E: 'static,
     {
@@ -56,7 +56,7 @@ pub mod impl_tokio {
         }
     }
 
-    impl<E> UnboundedAsyncReceiver<E> for Receiver<E>
+    impl<E> UnboundedReceiverAsync<E> for UnboundedReceiver<E>
     where
         E: 'static + Send + Sync,
     {

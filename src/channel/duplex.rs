@@ -1,7 +1,7 @@
 use super::{
     SendError,
-    broadcast::{BroadcastAsyncReceiver, BroadcastReceiverAsyncDyn},
-    unbounded::UnboundedAsyncSender,
+    broadcast::{BroadcastReceiverAsync, BroadcastReceiverAsyncDyn},
+    unbounded::UnboundedSenderAsync,
 };
 
 pub trait DuplexChan: Send + Sync {
@@ -16,8 +16,8 @@ pub trait DuplexChan: Send + Sync {
     fn split(
         self,
     ) -> (
-        impl UnboundedAsyncSender<Self::SendType, Error = Self::Error>,
-        impl BroadcastAsyncReceiver<Self::ReceiveType>,
+        impl UnboundedSenderAsync<Self::SendType, Error = Self::Error>,
+        impl BroadcastReceiverAsync<Self::ReceiveType>,
     )
     where
         Self::ReceiveType: Clone;
@@ -36,7 +36,7 @@ pub trait DuplexChanDyn {
     fn split(
         self,
     ) -> (
-        Box<dyn UnboundedAsyncSender<Self::SendType, Error = Self::Error>>,
+        Box<dyn UnboundedSenderAsync<Self::SendType, Error = Self::Error>>,
         Box<dyn BroadcastReceiverAsyncDyn<Self::ReceiveType>>,
     )
     where
@@ -63,7 +63,7 @@ where
     fn split(
         self,
     ) -> (
-        Box<dyn UnboundedAsyncSender<Self::SendType, Error = Self::Error>>,
+        Box<dyn UnboundedSenderAsync<Self::SendType, Error = Self::Error>>,
         Box<dyn BroadcastReceiverAsyncDyn<Self::ReceiveType>>,
     )
     where
@@ -76,12 +76,14 @@ where
 
 #[cfg(feature = "tokio")]
 pub mod impl_tokio {
-    use crate::channel::{broadcast::impl_tokio::BroadcastReceiver, unbounded::impl_tokio::Sender};
+    use crate::channel::{
+        broadcast::impl_tokio::BroadcastReceiver, unbounded::impl_tokio::UnboundedSender,
+    };
 
     use super::*;
 
     pub struct DuplexChanTokio<S, R> {
-        sender: Sender<S>,
+        sender: UnboundedSender<S>,
         receiver: BroadcastReceiver<R>,
     }
 
@@ -100,14 +102,14 @@ pub mod impl_tokio {
         }
 
         async fn receive(&mut self) -> Option<Self::ReceiveType> {
-            BroadcastAsyncReceiver::recv(&mut self.receiver).await
+            BroadcastReceiverAsync::recv(&mut self.receiver).await
         }
 
         fn split(
             self,
         ) -> (
-            impl UnboundedAsyncSender<Self::SendType, Error = Self::Error>,
-            impl BroadcastAsyncReceiver<Self::ReceiveType>,
+            impl UnboundedSenderAsync<Self::SendType, Error = Self::Error>,
+            impl BroadcastReceiverAsync<Self::ReceiveType>,
         )
         where
             Self::ReceiveType: Clone,

@@ -14,5 +14,5 @@ pub trait UseCase: 'static {
 pub trait UseCaseWithEvent: UseCase {
     type Event: 'static + Clone;
 
-    fn subscribe(&self) -> impl crate::channel::broadcast::BroadcastAsyncReceiver<Self::Event>;
+    fn subscribe(&self) -> impl crate::channel::broadcast::BroadcastReceiverAsync<Self::Event>;
 }

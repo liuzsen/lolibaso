@@ -2,29 +2,29 @@ use std::any::Any;
 
 use super::SendError;
 
-pub trait BroadcastAsyncChannelBuilder<E>
+pub trait BroadcastChannelBuilderAsync<E>
 where
     E: 'static + Clone,
 {
-    type Sender: BroadcastAsyncSender<E>;
-    type Receiver: BroadcastAsyncReceiver<E>;
+    type Sender: BroadcastSenderAsync<E>;
+    type Receiver: BroadcastReceiverAsync<E>;
 
     fn chan(&self) -> (Self::Sender, Self::Receiver);
 }
 
-pub trait BroadcastAsyncSender<E>: 'static
+pub trait BroadcastSenderAsync<E>: 'static
 where
     E: 'static + Clone,
 {
     type Error: SendError<E>;
-    type Receiver: BroadcastAsyncReceiver<E>;
+    type Receiver: BroadcastReceiverAsync<E>;
 
     fn send(&self, value: E) -> Result<(), Self::Error>;
 
     fn subscribe(&self) -> Self::Receiver;
 }
 
-pub trait BroadcastAsyncReceiver<E>: 'static + Send + Sync
+pub trait BroadcastReceiverAsync<E>: 'static + Send + Sync
 where
     E: 'static + Clone,
 {
@@ -43,10 +43,10 @@ where
 impl<E, T> BroadcastReceiverAsyncDyn<E> for T
 where
     E: 'static + Clone,
-    T: BroadcastAsyncReceiver<E>,
+    T: BroadcastReceiverAsync<E>,
 {
     async fn recv(&mut self) -> Option<E> {
-        BroadcastAsyncReceiver::recv(self).await
+        BroadcastReceiverAsync::recv(self).await
     }
 }
 
@@ -62,7 +62,7 @@ pub mod impl_tokio {
 
     pub struct ChanBuilder {}
 
-    impl<E> BroadcastAsyncChannelBuilder<E> for ChanBuilder
+    impl<E> BroadcastChannelBuilderAsync<E> for ChanBuilder
     where
         E: 'static + Debug + Clone + Send + Sync,
     {
@@ -127,7 +127,7 @@ pub mod impl_tokio {
         }
     }
 
-    impl<E> BroadcastAsyncSender<E> for BroadcastSender<E>
+    impl<E> BroadcastSenderAsync<E> for BroadcastSender<E>
     where
         E: 'static + Debug + Clone + Send + Sync,
     {
@@ -146,7 +146,7 @@ pub mod impl_tokio {
         }
     }
 
-    impl<E> BroadcastAsyncReceiver<E> for BroadcastReceiver<E>
+    impl<E> BroadcastReceiverAsync<E> for BroadcastReceiver<E>
     where
         E: 'static + Clone + Send + Sync,
     {
