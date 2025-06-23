@@ -39,7 +39,7 @@ impl JsonParser for SerdeJsonParser {
     }
 }
 
-fn extract_error_name(s: &str) -> Option<(String, Option<String>)> {
+pub fn extract_error_name(s: &str) -> Option<(String, Option<String>)> {
     let start = s.find("##")? + 2;
     if start >= s.len() {
         return None;

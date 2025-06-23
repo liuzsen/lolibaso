@@ -43,6 +43,9 @@ impl BizError {
 
     pub const InvalidJsonBody: Self =
         Self::new(StatusCode::BAD_REQUEST.as_u16(), 102, "Invalid json body");
+
+    pub const InvalidQuery: Self =
+        Self::new(StatusCode::BAD_REQUEST.as_u16(), 103, "Invalid query");
 }
 
 /// Convert u16 to http status code at compile time

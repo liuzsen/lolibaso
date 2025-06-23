@@ -870,6 +870,7 @@ dependencies = [
  "lolibaso-macros",
  "serde",
  "serde_json",
+ "serde_urlencoded",
  "tokio",
 ]
 
