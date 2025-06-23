@@ -2,6 +2,8 @@ use std::{
     any::{Any, TypeId},
     collections::HashMap,
     marker::PhantomData,
+    rc::Rc,
+    sync::Arc,
 };
 
 pub trait Provider: Sized + 'static {
@@ -90,5 +92,39 @@ where
 impl Provider for () {
     fn build(_ctx: &mut ProviderContext) -> anyhow::Result<Self> {
         Ok(())
+    }
+}
+
+impl<T> Provider for Arc<T>
+where
+    T: Provider,
+{
+    fn build(ctx: &mut ProviderContext) -> anyhow::Result<Self> {
+        if let Some(t) = ctx.get::<Self>() {
+            return Ok(t.clone());
+        }
+
+        let t = T::build(ctx)?;
+        let this = Arc::new(t);
+        ctx.insert(this.clone());
+
+        Ok(this)
+    }
+}
+
+impl<T> Provider for Rc<T>
+where
+    T: Provider,
+{
+    fn build(ctx: &mut ProviderContext) -> anyhow::Result<Self> {
+        if let Some(t) = ctx.get::<Self>() {
+            return Ok(t.clone());
+        }
+
+        let t = T::build(ctx)?;
+        let this = Rc::new(t);
+        ctx.insert(this.clone());
+
+        Ok(this)
     }
 }
