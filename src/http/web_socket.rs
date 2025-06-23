@@ -1,6 +1,8 @@
 use bytes::Bytes;
 use bytestring::ByteString;
 
+use super::{error::BizError, request::HttpRequest};
+
 pub trait WSMessage: Send + Sync + 'static {}
 
 #[derive(Debug)]
@@ -34,6 +36,16 @@ pub trait WSSessionStream:
         Item = Result<<Self as WSSession>::Message, <Self as WSSession>::ProtocolError>,
     > + WSSession
 {
+}
+
+pub trait WSAdapter<C> {
+    fn accept<R>(&self, req: R) -> Result<(), BizError>
+    where
+        R: HttpRequest;
+
+    async fn run<W>(self, chan_builder: C, ws: W)
+    where
+        W: WSSessionStream;
 }
 
 #[cfg(feature = "actix-ws")]
