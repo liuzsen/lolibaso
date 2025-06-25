@@ -30,9 +30,10 @@ pub trait HttpRequestModel {
 }
 
 pub trait FromHttpRequest<'a>: HttpRequestModel + Sized {
-    fn from_request_<R, P>(req: &'a R, parser: P) -> Result<Self, BizError>
+    fn from_request_<R, P, F>(req: &'a R, parser: P) -> Result<Self, BizError>
     where
         R: HttpRequest,
-        P: Parser<'a, <Self as HttpRequestModel>::Body>,
-        P: Parser<'a, <Self as HttpRequestModel>::Query>;
+        F: Format,
+        P: Parser<'a, <Self as HttpRequestModel>::Query, UrlEncodedQuery>,
+        P: Parser<'a, <Self as HttpRequestModel>::Body, F>;
 }
