@@ -15,7 +15,7 @@ impl<T> Deref for Request<T> {
 pub trait HttpRequest {
     fn method(&self) -> http::Method;
 
-    fn uri(&self) -> http::Uri;
+    fn uri(&self) -> &http::Uri;
 
     fn version(&self) -> http::Version;
 
@@ -39,6 +39,19 @@ pub mod actix_impl {
     pub struct ActixHttpRequest {
         pub request: actix_web::HttpRequest,
         pub payload: Bytes,
+        // 缓存转换后的 URI，避免重复转换，主要为了解决 http crate 版本的问题
+        // 当 actix-web 发布 5.0 后应该删除这个字段
+        cached_uri: std::sync::OnceLock<http::Uri>,
+    }
+
+    impl ActixHttpRequest {
+        pub fn new(request: actix_web::HttpRequest, payload: Bytes) -> Self {
+            Self {
+                request,
+                payload,
+                cached_uri: std::sync::OnceLock::new(),
+            }
+        }
     }
 
     impl HttpRequest for ActixHttpRequest {
@@ -47,9 +60,12 @@ pub mod actix_impl {
             http::Method::from_str(s).unwrap()
         }
 
-        fn uri(&self) -> http::Uri {
-            let uri = self.request.uri().to_string();
-            http::Uri::from_str(&uri).unwrap()
+        fn uri(&self) -> &http::Uri {
+            // 获取 URI 的引用，安全地将 actix-web 的 URI 转换为 http v1.x 的 URI
+            self.cached_uri.get_or_init(|| {
+                let uri_str = self.request.uri().to_string();
+                uri_str.parse().expect("Invalid URI")
+            })
         }
 
         fn version(&self) -> http::Version {
