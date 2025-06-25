@@ -1,7 +1,6 @@
 pub mod adapter;
 pub mod api_macro;
 pub mod error;
-pub mod json;
 pub mod parser;
 pub mod request;
 pub mod response;
