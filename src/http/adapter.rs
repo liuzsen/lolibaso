@@ -1,15 +1,34 @@
-use crate::use_case::UseCase;
+use crate::{http::parser::Parser, use_case::UseCase};
 
 use super::{error::BizError, request::HttpRequest};
 
-pub trait Adapter<U: UseCase, P> {
+pub trait HttpAdapter<'a, U, P>
+where
+    U: UseCase,
+{
+    type Request: HttpRequestModel;
     type Response;
 
-    fn convert_input<R>(&self, request: R, parser: P) -> Result<U::Input, BizError>
+    fn convert_input<R>(&self, request: &'a R, parser: P) -> Result<U::Input, BizError>
     where
-        R: HttpRequest;
+        R: HttpRequest,
+        P: Parser<'a, <Self::Request as HttpRequestModel>::Query>,
+        P: Parser<'a, <Self::Request as HttpRequestModel>::Body>;
 
     fn convert_output(&self, output: U::Output) -> Self::Response;
 
     fn convert_err(&self, err: U::Error) -> BizError;
+}
+
+pub trait HttpRequestModel {
+    type Query;
+    type Body;
+}
+
+pub trait FromHttpRequest<'a>: HttpRequestModel + Sized {
+    fn from_request_<R, P>(req: &'a R, parser: P) -> Result<Self, BizError>
+    where
+        R: HttpRequest,
+        P: Parser<'a, <Self as HttpRequestModel>::Body>,
+        P: Parser<'a, <Self as HttpRequestModel>::Query>;
 }
