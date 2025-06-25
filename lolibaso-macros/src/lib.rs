@@ -1,6 +1,6 @@
 use proc_macro::TokenStream;
 
-mod err_enum;
+mod biz_err_ext;
 mod get_config;
 mod http_requst;
 mod http_response;
@@ -17,8 +17,8 @@ pub fn derive_provider(input: TokenStream) -> TokenStream {
 
 #[allow(non_snake_case)]
 #[proc_macro_attribute]
-pub fn BizErrEnum(_args: TokenStream, item: TokenStream) -> TokenStream {
-    let entity = syn::parse_macro_input!(item as err_enum::ErrEnum);
+pub fn BizErrExt(_args: TokenStream, item: TokenStream) -> TokenStream {
+    let entity = syn::parse_macro_input!(item as biz_err_ext::ErrEnum);
     let output = entity
         .expand()
         .unwrap_or_else(syn::Error::into_compile_error);

@@ -9,7 +9,6 @@ pub struct ErrEnum {
     ident: Ident,
     base_biz_code: u32,
     default_http_status: Option<u16>,
-    err_path: Option<syn::TypePath>,
     variants: Vec<ErrVariant>,
 }
 
@@ -69,7 +68,6 @@ impl Parse for ErrEnum {
             });
         }
 
-        let mut err_path = None;
         let mut default_http_status = None;
         let mut base_biz_code = None;
         for attr in &input.attrs {
@@ -79,9 +77,6 @@ impl Parse for ErrEnum {
             match &*path.to_string() {
                 "base_biz_code" => {
                     base_biz_code = Some(parse_base_biz_code(attr)?);
-                }
-                "err_path" => {
-                    err_path = Some(parse_err_path(attr)?);
                 }
                 "default_http_status" => {
                     default_http_status = Some(parse_http_status(attr)?);
@@ -112,7 +107,6 @@ impl Parse for ErrEnum {
             ident: input.ident,
             base_biz_code,
             default_http_status,
-            err_path,
             variants,
             vis: input.vis,
         })
@@ -153,23 +147,6 @@ fn parse_http_status(attr: &syn::Attribute) -> syn::Result<u16> {
     Ok(lit as u16)
 }
 
-fn parse_err_path(attr: &syn::Attribute) -> syn::Result<syn::TypePath> {
-    let Ok(list) = attr.meta.require_list() else {
-        return Err(syn::Error::new_spanned(
-            attr,
-            "Use `#[err_path(...)]` attribute",
-        ));
-    };
-
-    let Ok(path) = list.parse_args() else {
-        return Err(syn::Error::new_spanned(
-            attr,
-            "Expected TypePath. Use `#[err_path(TypePath)]` attribute",
-        ));
-    };
-
-    Ok(path)
-}
 fn parse_base_biz_code(attr: &syn::Attribute) -> syn::Result<u32> {
     let named = attr.meta.require_name_value()?;
     let lit = require_lit_int(&named.value)?;
@@ -186,33 +163,48 @@ impl ErrEnum {
     pub fn expand(self) -> syn::Result<proc_macro2::TokenStream> {
         let ident = &self.ident;
         let kinds = self.gen_err_kinds();
-        let err_path = match self.err_path {
-            Some(p) => quote!(#p),
-            None => quote!(lolibaso::http::error::BizError),
-        };
-        let all_variants = self.variants.iter().map(|v| {
-            let variant = &v.ident;
-            quote!(&#ident::#variant)
-        });
+        let (all_variants, name_arms) = self
+            .variants
+            .iter()
+            .map(|v| {
+                let variant = &v.ident;
+                let v_str = variant.to_string();
+                (
+                    quote!(&BizError::#variant),
+                    quote!(
+                        #v_str => BizError::#variant,
+                    ),
+                )
+            })
+            .unzip::<_, _, Vec<_>, Vec<_>>();
+
         let vis = &self.vis;
         let stream = quote_spanned! { self.ident.span() =>
+            #[allow(non_upper_case_globals)]
+            #vis trait #ident {
+                #(#kinds)*
 
-            #vis enum #ident {}
+                fn all_in_scope() -> &'static [&'static BizError] {
+                    use lolibaso::http::error::BizError;
+                    static ALL: &[&BizError] = &[#(#all_variants),*];
+                    ALL
+                }
 
-            const _: () = {
-                use #err_path as BizError;
+                fn try_from_name<S: AsRef<str>>(name: &str, ctx: Option<S>) -> Option<lolibaso::http::error::BizError> {
+                    let err = match name {
+                        #(#name_arms)*
+                        _ => return None,
+                    };
 
-                #[allow(non_upper_case_globals)]
-                impl #ident {
-                    #(#kinds)*
-
-                    pub fn all() -> &'static [&'static BizError] {
-                       static ALL: &[&BizError] = &[#(#all_variants),*];
-                       ALL
+                    if let Some(ctx) = ctx {
+                        Some(err.with_context(ctx))
+                    } else {
+                        Some(err)
                     }
                 }
-            };
+            }
 
+            impl #ident for lolibaso::http::error::BizError {}
         };
 
         Ok(stream)
@@ -235,7 +227,7 @@ impl ErrEnum {
                 .or(self.default_http_status)
                 .unwrap_or(400);
             let kind = quote_spanned! { variant.ident.span() =>
-                pub const #v_ident: BizError = BizError::new(#http_status, #biz_code, #desc);
+                const #v_ident: BizError = BizError::new(#http_status, #biz_code, #desc);
             };
             kinds.push(kind);
         }
