@@ -1,5 +1,7 @@
 use serde::Deserialize;
 
+use crate::http::error::BizError;
+
 pub trait Parser<'a, T, F: Format = Json> {
     fn parse(&self, input: &'a [u8]) -> Result<T, ParseError>;
 }
@@ -11,7 +13,7 @@ pub enum ParseError {
         err_name: String,
         err_msg: Option<String>,
     },
-    Other(anyhow::Error),
+    BizErr(BizError),
 }
 
 pub struct SimpleParser;
@@ -31,11 +33,13 @@ where
                 if e.is_data() {
                     let s = e.to_string();
                     let Some((err_name, err_msg)) = extract_error_name(&s) else {
-                        return Err(ParseError::Other(From::from(e)));
+                        return Err(ParseError::BizErr(BizError::InvalidJson.with_context(s)));
                     };
                     Err(ParseError::Custom { err_name, err_msg })
                 } else {
-                    Err(ParseError::Other(From::from(e)))
+                    Err(ParseError::BizErr(
+                        BizError::InvalidJson.with_context(e.to_string()),
+                    ))
                 }
             }
         }
@@ -57,7 +61,7 @@ where
             Err(err) => {
                 let s = err.to_string();
                 let Some((err_name, err_msg)) = extract_error_name(&s) else {
-                    return Err(ParseError::Other(From::from(err)));
+                    return Err(ParseError::BizErr(BizError::InvalidQuery.with_context(s)));
                 };
 
                 return Err(ParseError::Custom { err_name, err_msg });
