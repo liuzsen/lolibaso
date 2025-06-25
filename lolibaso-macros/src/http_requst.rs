@@ -3,12 +3,12 @@ use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{parse::Parse, spanned::Spanned};
 
-pub struct Request {
+pub struct HttpRequest {
     type_name: syn::Ident,
     body: Option<(syn::Ident, syn::Type)>,
 }
 
-impl Parse for Request {
+impl Parse for HttpRequest {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
         let input = syn::DeriveInput::parse(input)?;
         let span = input.span();
@@ -45,14 +45,14 @@ impl Parse for Request {
             }
         }
 
-        Ok(Request {
+        Ok(HttpRequest {
             type_name: input.ident,
             body,
         })
     }
 }
 
-impl Request {
+impl HttpRequest {
     pub fn expand(&self) -> TokenStream {
         let type_name = &self.type_name;
         let parse_body = self.parse_body();

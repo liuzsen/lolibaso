@@ -1,9 +1,9 @@
 use proc_macro::TokenStream;
 
-mod api_requst;
-mod api_response;
 mod err_enum;
 mod get_config;
+mod http_requst;
+mod http_response;
 mod init;
 mod provider;
 
@@ -28,15 +28,15 @@ pub fn BizErrEnum(_args: TokenStream, item: TokenStream) -> TokenStream {
     stream
 }
 
-#[proc_macro_derive(ApiRequest, attributes(request))]
-pub fn derive_api_request(input: TokenStream) -> TokenStream {
-    let input = syn::parse_macro_input!(input as api_requst::Request);
+#[proc_macro_derive(HttpRequest, attributes(request))]
+pub fn derive_http_request(input: TokenStream) -> TokenStream {
+    let input = syn::parse_macro_input!(input as http_requst::HttpRequest);
     input.expand().into()
 }
 
-#[proc_macro_derive(ApiResponse, attributes(response))]
-pub fn derive_api_response(input: TokenStream) -> TokenStream {
-    let input = syn::parse_macro_input!(input as api_response::ApiResponse);
+#[proc_macro_derive(HttpResponse, attributes(response))]
+pub fn derive_http_response(input: TokenStream) -> TokenStream {
+    let input = syn::parse_macro_input!(input as http_response::HttpResponse);
     input.expand().into()
 }
 
