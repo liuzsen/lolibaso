@@ -21,6 +21,7 @@ serde_json = "1.0.140"
 derive_more = { version = "2.0.1", features = ["from", "display", "from_str"] }
 
 [dependencies]
+actix-http = { version = "3.11.0", optional = true }
 anyhow.workspace = true
 async-trait = "0.1.88"
 derive_more.workspace = true
@@ -30,6 +31,7 @@ lolibaso-macros.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 serde_urlencoded = { version = "0.7.1", optional = true }
+tracing = "0.1.41"
 
 [dependencies.actix-web]
 version = "4"
@@ -57,7 +59,8 @@ version = "0.3.0"
 optional = true
 
 [features]
-default = ["actix-web", "tokio", "actix-ws", "web-socket", "serde_urlencoded"]
+default = ["actix", "tokio", "web-socket", "serde_urlencoded"]
+actix = ["actix-web", "actix-ws", "actix-http"]
 actix-web = ["dep:actix-web"]
 tokio = ["dep:tokio"]
 web-socket = ["dep:futures-util", "bytes"]
@@ -65,3 +68,4 @@ futures-util = ["dep:futures-util"]
 bytes = ["dep:bytes", "dep:bytestring"]
 actix-ws = ["dep:actix-ws", "web-socket"]
 serde_urlencoded = ["dep:serde_urlencoded"]
+actix-http = ["dep:actix-http"]
