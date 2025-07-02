@@ -49,7 +49,10 @@ pub trait WebSocketChan:
     }
 }
 
-pub trait WSAdapter<P> {
+pub trait WSAdapter<P, C>
+where
+    C: crate::channel::duplex::DuplexChanClient,
+{
     type Request: HttpRequestModel<Body = ()>;
 
     fn accept<R, F, W>(self, request: &R, parser: P, get_ws: F) -> BizResult<(), BizError>
