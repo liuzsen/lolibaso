@@ -8,6 +8,12 @@ pub struct WebSocketActix {
     stream: actix_ws::AggregatedMessageStream,
 }
 
+impl WebSocketActix {
+    pub fn new(session: actix_ws::Session, stream: actix_ws::AggregatedMessageStream) -> Self {
+        Self { session, stream }
+    }
+}
+
 impl From<actix_ws::CloseCode> for protocol::CloseCode {
     fn from(code: actix_ws::CloseCode) -> Self {
         let u16 = u16::from(code);
