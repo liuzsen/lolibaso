@@ -1,8 +1,8 @@
 use serde::Deserialize;
 
-use crate::http::error::BizError;
+use crate::{http::error::BizError, provider::Provider};
 
-pub trait Parser<'a, T, F: Format = Json> {
+pub trait Parser<'a, T, F: Format = Json>: Provider {
     fn parse(&self, input: &'a [u8]) -> Result<T, ParseError>;
 }
 
@@ -17,6 +17,12 @@ pub enum ParseError {
 }
 
 pub struct SimpleParser;
+
+impl Provider for SimpleParser {
+    fn build(_ctx: &mut crate::provider::ProviderContext) -> anyhow::Result<Self> {
+        Ok(Self)
+    }
+}
 
 pub struct Json;
 
