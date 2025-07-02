@@ -51,6 +51,12 @@ pub mod impl_tokio {
     use super::*;
     pub struct UnboundedChannelBuilderTokio {}
 
+    impl UnboundedChannelBuilderTokio {
+        pub fn new() -> Self {
+            Self {}
+        }
+    }
+
     impl crate::provider::Provider for UnboundedChannelBuilderTokio {
         fn build(_ctx: &mut crate::provider::ProviderContext) -> anyhow::Result<Self> {
             Ok(Self {})
