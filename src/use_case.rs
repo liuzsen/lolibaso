@@ -1,5 +1,7 @@
 use crate::result::BizResult;
 
+pub mod long_run;
+
 pub trait UseCase: 'static {
     type Input;
     type Output;
@@ -9,10 +11,4 @@ pub trait UseCase: 'static {
         self,
         input: Self::Input,
     ) -> impl Future<Output = BizResult<Self::Output, Self::Error>> + 'static;
-}
-
-pub trait UseCaseWithEvent: UseCase {
-    type Event: 'static + Clone;
-
-    fn subscribe(&self) -> impl crate::channel::broadcast::BroadcastReceiver<Self::Event>;
 }
