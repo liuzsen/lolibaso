@@ -92,6 +92,12 @@ pub mod impl_tokio {
 
     pub struct BroadcastChanBuilderTokio {}
 
+    impl BroadcastChanBuilderTokio {
+        pub fn new() -> Self {
+            Self {}
+        }
+    }
+
     impl Provider for BroadcastChanBuilderTokio {
         fn build(_ctx: &mut crate::provider::ProviderContext) -> anyhow::Result<Self> {
             Ok(Self {})

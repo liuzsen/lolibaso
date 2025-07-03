@@ -29,6 +29,11 @@ pub trait HttpRequestModel {
     type Body;
 }
 
+impl HttpRequestModel for () {
+    type Body = ();
+    type Query = ();
+}
+
 pub trait FromHttpRequest<'a>: HttpRequestModel + Sized {
     fn from_http_req<R, P, F>(req: &'a R, parser: P) -> Result<Self, BizError>
     where

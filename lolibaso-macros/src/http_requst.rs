@@ -58,9 +58,9 @@ impl HttpRequest {
     pub fn expand(&self) -> TokenStream {
         let type_name = &self.type_name;
         let parse_body = self.parse_body();
-        let assign_body = self.body.is_some().then(|| quote!(body));
+        let assign_body = self.body.is_some().then(|| quote!(body,));
         let parse_query = self.parse_query();
-        let assign_query = self.query.is_some().then(|| quote!(query));
+        let assign_query = self.query.is_some().then(|| quote!(query,));
 
         let unit = syn::parse_quote!(());
         let body_ty = self.body.as_ref().map(|(_, ty)| ty).unwrap_or(&unit);
@@ -95,7 +95,7 @@ impl HttpRequest {
                             #parse_body
                             #parse_query
 
-                            Ok(Request { #assign_body, #assign_query })
+                            Ok(Request { #assign_body #assign_query })
                         }
                     }
                 };

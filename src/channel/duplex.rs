@@ -4,6 +4,13 @@ use super::{
     unbounded::{UnboundedReceiver, UnboundedReceiverDyn, UnboundedSender},
 };
 
+pub trait DuplexChanBuilder<C, E>: Send + Sync + 'static {
+    type Server: DuplexChanServer<Event = E, Command = C>;
+    type Client: DuplexChanClient<Event = E, Command = C>;
+
+    fn chan(&self) -> (Self::Server, Self::Client);
+}
+
 pub trait DuplexChanServer: Send + Sync + Sized + 'static {
     type Event: 'static + Clone;
     type Command: 'static;
@@ -33,7 +40,7 @@ pub trait DuplexChanServer: Send + Sync + Sized + 'static {
     }
 }
 
-pub trait DuplexChanClient: Send + Sync + Sized + 'static {
+pub trait DuplexChanClient: Send + Sync + Sized + 'static + Clone {
     type Command: 'static;
     type Event: 'static;
     type Error: SendError<Self::Command>;
@@ -186,6 +193,39 @@ pub mod impl_tokio {
 
     use super::*;
 
+    pub struct DuplexChanBuilderTokio {}
+
+    impl Provider for DuplexChanBuilderTokio {
+        fn build(_ctx: &mut crate::provider::ProviderContext) -> anyhow::Result<Self> {
+            Ok(Self {})
+        }
+    }
+
+    impl<C, E> DuplexChanBuilder<C, E> for DuplexChanBuilderTokio
+    where
+        C: Send + Sync + 'static,
+        E: Send + Sync + 'static + Clone + Debug,
+    {
+        type Server = DuplexChanServerTokio<C, E>;
+        type Client = DuplexChanClientTokio<C, E>;
+
+        fn chan(&self) -> (Self::Server, Self::Client) {
+            let (cmd_tx, cmd_rx) = UnboundedChannelBuilderTokio::new().chan();
+            let (event_tx, event_rx) = BroadcastChanBuilderTokio::new().chan();
+
+            (
+                DuplexChanServerTokio {
+                    sender: event_tx,
+                    receiver: cmd_rx,
+                    cmd_sender: cmd_tx.clone(),
+                },
+                DuplexChanClientTokio {
+                    sender: cmd_tx,
+                    receiver: event_rx,
+                },
+            )
+        }
+    }
     pub struct DuplexChanClientTokio<C, E> {
         sender: UnboundedSenderTokio<C>,
         receiver: BroadcastReceiverTokio<E>,
@@ -201,49 +241,6 @@ pub mod impl_tokio {
                 receiver: self.receiver.clone(),
             }
         }
-    }
-
-    impl<E, C> Provider for DuplexChanClientTokio<C, E>
-    where
-        E: Send + Sync + 'static + Clone + Debug,
-        C: Send + Sync + 'static,
-    {
-        fn build(ctx: &mut crate::provider::ProviderContext) -> anyhow::Result<Self> {
-            if let Some(sender) = ctx.get::<Self>() {
-                return Ok(Clone::clone(sender));
-            }
-            let (client, server) = build_chan(ctx)?;
-
-            ctx.insert(client.clone());
-            ctx.insert(server);
-
-            Ok(client)
-        }
-    }
-
-    fn build_chan<C, E>(
-        ctx: &mut crate::provider::ProviderContext,
-    ) -> anyhow::Result<(DuplexChanClientTokio<C, E>, DuplexChanServerTokio<C, E>)>
-    where
-        C: Send + Sync + 'static,
-        E: Send + Sync + 'static + Clone + Debug,
-    {
-        let builder = UnboundedChannelBuilderTokio::build(ctx)?;
-        let (sender, receiver) = builder.chan();
-        let builder = BroadcastChanBuilderTokio::build(ctx)?;
-        let (tx, rx) = builder.chan();
-
-        Ok((
-            DuplexChanClientTokio {
-                sender: sender.clone(),
-                receiver: rx,
-            },
-            DuplexChanServerTokio {
-                sender: tx,
-                receiver,
-                cmd_sender: sender,
-            },
-        ))
     }
 
     impl<S, R> DuplexChanClient for DuplexChanClientTokio<S, R>
@@ -281,22 +278,6 @@ pub mod impl_tokio {
         sender: BroadcastSenderTokio<E>,
         receiver: UnboundedReceiverTokio<C>,
         cmd_sender: UnboundedSenderTokio<C>,
-    }
-
-    impl<C, E> Provider for DuplexChanServerTokio<C, E>
-    where
-        E: Send + Sync + 'static + Clone + Debug,
-        C: Send + Sync + 'static,
-    {
-        fn build(ctx: &mut crate::provider::ProviderContext) -> anyhow::Result<Self> {
-            if let Some(sender) = ctx.remove::<Self>() {
-                return Ok(sender);
-            }
-            let (client, server) = build_chan(ctx)?;
-            ctx.insert(client.clone());
-
-            Ok(server)
-        }
     }
 
     impl<C, E> DuplexChanServer for DuplexChanServerTokio<C, E>
