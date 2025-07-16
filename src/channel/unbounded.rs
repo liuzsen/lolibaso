@@ -96,7 +96,10 @@ pub mod impl_tokio {
         receiver: tokio::sync::mpsc::UnboundedReceiver<E>,
     }
 
-    impl<E> SendError<E> for tokio::sync::mpsc::error::SendError<E> {
+    impl<E> SendError<E> for tokio::sync::mpsc::error::SendError<E>
+    where
+        E: Send + Sync + 'static,
+    {
         fn unsent_item(self) -> E {
             self.0
         }
@@ -104,7 +107,7 @@ pub mod impl_tokio {
 
     impl<E> UnboundedSender<E> for UnboundedSenderTokio<E>
     where
-        E: 'static,
+        E: Send + Sync + 'static,
     {
         type Error = tokio::sync::mpsc::error::SendError<E>;
 

@@ -157,7 +157,7 @@ pub mod impl_tokio {
 
     impl<E> SendError<E> for broadcast::error::SendError<E>
     where
-        E: 'static + Debug,
+        E: 'static + Debug + Send + Sync,
     {
         fn unsent_item(self) -> E {
             self.0

@@ -1,7 +1,7 @@
 pub mod adapter;
 pub mod api_macro;
+pub mod codec;
 pub mod error;
-pub mod parser;
 pub mod request;
 pub mod response;
 

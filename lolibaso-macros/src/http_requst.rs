@@ -72,6 +72,7 @@ impl HttpRequest {
                         adapter::{FromHttpRequest, HttpRequestModel},
                         error::BizError,
                         request::HttpRequest,
+                        codec::{UrlEncodedQuery, Format, decoder::Decoder},
                     };
 
                     impl lolibaso::http::adapter::HttpRequestModel for #type_name {
@@ -81,16 +82,12 @@ impl HttpRequest {
                     }
 
                     impl<'a> FromHttpRequest<'a> for #type_name {
-                        fn from_http_req<R, P, F>(req: &'a R, parser: P) -> Result<Self, BizError>
+                        fn from_http_req<R, D, F>(req: &'a R, decoder: &D) -> Result<Self, BizError>
                         where
                             R: HttpRequest,
-                            F: lolibaso::http::parser::Format,
-                            P: lolibaso::http::parser::Parser<
-                                    'a,
-                                    <Self as HttpRequestModel>::Query,
-                                    lolibaso::http::parser::UrlEncodedQuery,
-                                >,
-                            P: lolibaso::http::parser::Parser<'a, <Self as HttpRequestModel>::Body, F>
+                            F: Format,
+                            D: Decoder<'a, <Self as HttpRequestModel>::Query, UrlEncodedQuery>,
+                            D: Decoder<'a, <Self as HttpRequestModel>::Body, F>
                         {
                             #parse_body
                             #parse_query
@@ -108,11 +105,11 @@ impl HttpRequest {
         let (_query_ident, query_ty) = self.query.as_ref()?;
         let output = quote! {
             let query = req.uri().query().unwrap_or_default();
-            let query: #query_ty = match parser.parse(query.as_bytes())
+            let query: #query_ty = match decoder.decode(query.as_bytes())
             {
                 Ok(q) => q,
                 Err(e) => match e {
-                    lolibaso::http::parser::ParseError::Custom { err_name, err_msg } => {
+                    lolibaso::http::codec::decoder::DecodeError::Custom { err_name, err_msg } => {
                         let err = BizError::try_from_name(&err_name, err_msg.as_ref());
                         return Err(err.unwrap_or_else(|| {
                             tracing::warn!(
@@ -124,7 +121,7 @@ impl HttpRequest {
                             }
                         }));
                     }
-                    lolibaso::http::parser::ParseError::BizErr(biz_error) => {
+                    lolibaso::http::codec::decoder::DecodeError::BizErr(biz_error) => {
                         return Err(BizError::InvalidQuery.with_context(biz_error.to_string()));
                     }
                 },
@@ -137,11 +134,12 @@ impl HttpRequest {
     fn parse_body(&self) -> Option<TokenStream> {
         let (_body_ident, body_ty) = self.body.as_ref()?;
         let output = quote! {
+            use lolibaso::http::codec::decoder::Decoder;
             let body = req.body().unwrap_or(b"{}");
-            let body: #body_ty = match parser.parse(body) {
+            let body: #body_ty = match decoder.decode(body) {
                 Ok(body) => body,
                 Err(e) => match e {
-                    lolibaso::http::parser::ParseError::Custom { err_name, err_msg } => {
+                    lolibaso::http::codec::decoder::DecodeError::Custom { err_name, err_msg } => {
                         let err = BizError::try_from_name(&err_name, err_msg.as_ref());
                         return Err(err.unwrap_or_else(|| {
                             tracing::warn!(
@@ -153,7 +151,7 @@ impl HttpRequest {
                             }
                         }));
                     }
-                    lolibaso::http::parser::ParseError::BizErr(biz_error) => {
+                    lolibaso::http::codec::decoder::DecodeError::BizErr(biz_error) => {
                         return Err(
                             BizError::InvalidRequestBody.with_context(biz_error.to_string())
                         );

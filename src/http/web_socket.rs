@@ -5,7 +5,7 @@ use futures_util::StreamExt;
 use crate::{
     http::{
         adapter::HttpRequestModel,
-        parser::{Json, Parser, UrlEncodedQuery},
+        codec::{Json, UrlEncodedQuery, decoder::Decoder},
         web_socket::protocol::WSMessage,
     },
     result::BizResult,
@@ -49,17 +49,17 @@ pub trait WebSocketChan:
     }
 }
 
-pub trait WSAdapter<P, C>
+pub trait WSAdapter<C, D>
 where
-    C: crate::channel::duplex::DuplexChanClient,
+    D: crate::channel::duplex::DuplexChanClient,
 {
     type Request: HttpRequestModel<Body = ()>;
 
-    fn accept<R, F, W>(self, request: &R, parser: P, get_ws: F) -> BizResult<(), BizError>
+    fn accept<R, F, W>(self, request: &R, codec: C, get_ws: F) -> BizResult<(), BizError>
     where
         R: HttpRequest,
         F: FnOnce() -> anyhow::Result<W>,
         W: WebSocketChan,
-        for<'a> P: Parser<'a, <Self::Request as HttpRequestModel>::Query, UrlEncodedQuery>,
-        for<'a> P: Parser<'a, <Self::Request as HttpRequestModel>::Body, Json>;
+        for<'a> C: Decoder<'a, <Self::Request as HttpRequestModel>::Query, UrlEncodedQuery>,
+        for<'a> C: Decoder<'a, (), Json>;
 }

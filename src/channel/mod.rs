@@ -4,7 +4,7 @@ pub mod broadcast;
 pub mod duplex;
 pub mod unbounded;
 
-pub trait SendError<T>: std::error::Error {
+pub trait SendError<T>: std::error::Error + Send + Sync + 'static {
     fn unsent_item(self) -> T;
 }
 
@@ -26,7 +26,10 @@ impl<T> fmt::Display for ChanClosed<T> {
 }
 
 impl<T> std::error::Error for ChanClosed<T> {}
-impl<T> SendError<T> for ChanClosed<T> {
+impl<T> SendError<T> for ChanClosed<T>
+where
+    T: Send + Sync + 'static,
+{
     fn unsent_item(self) -> T {
         self.0
     }
