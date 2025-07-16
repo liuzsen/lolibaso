@@ -60,9 +60,9 @@ version = "0.3.0"
 optional = true
 
 [features]
-default = ["actix", "tokio", "web-socket", "serde_urlencoded"]
+default = ["actix", "tokio", "web-socket", "serde_urlencoded", "runtime"]
 actix = ["actix-web", "actix-ws", "actix-http"]
-actix-web = ["dep:actix-web"]
+actix-web = ["dep:actix-web", "spawn_local"]
 tokio = ["dep:tokio"]
 web-socket = ["dep:futures-util", "bytes"]
 futures-util = ["dep:futures-util"]
@@ -70,3 +70,6 @@ bytes = ["dep:bytes", "dep:bytestring"]
 actix-ws = ["dep:actix-ws", "web-socket"]
 serde_urlencoded = ["dep:serde_urlencoded"]
 actix-http = ["dep:actix-http"]
+runtime = ["tokio"]
+spawn_global = []
+spawn_local = []
