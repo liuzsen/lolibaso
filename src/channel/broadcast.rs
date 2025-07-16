@@ -82,7 +82,7 @@ where
 
 #[cfg(feature = "tokio")]
 pub mod impl_tokio {
-    use std::{fmt::Debug, usize};
+    use std::fmt::Debug;
 
     use tokio::sync::broadcast;
 
@@ -112,7 +112,7 @@ pub mod impl_tokio {
         type Receiver = BroadcastReceiverTokio<E>;
 
         fn chan(&self) -> (Self::Sender, Self::Receiver) {
-            let (sender, receiver) = broadcast::channel(usize::MAX);
+            let (sender, receiver) = broadcast::channel(1024);
             (
                 BroadcastSenderTokio { sender },
                 BroadcastReceiverTokio { receiver },
