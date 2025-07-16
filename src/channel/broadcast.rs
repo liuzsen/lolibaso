@@ -7,7 +7,11 @@ where
     type Sender: BroadcastSender<E>;
     type Receiver: BroadcastReceiver<E>;
 
-    fn chan(&self) -> (Self::Sender, Self::Receiver);
+    fn chan(&self) -> (Self::Sender, Self::Receiver) {
+        self.chan_with_capacity(1024)
+    }
+
+    fn chan_with_capacity(&self, capacity: usize) -> (Self::Sender, Self::Receiver);
 }
 
 pub trait BroadcastSender<E>: 'static + Sized + Send + Sync
@@ -58,15 +62,26 @@ pub trait BroadcastReceiver<E>: 'static + Send + Sync
 where
     E: 'static + Clone,
 {
-    fn recv(&mut self) -> impl Future<Output = Option<E>> + Send + Sync;
+    fn recv(&mut self) -> impl Future<Output = Result<Option<E>, Lagged>> + Send + Sync;
 }
+
+#[derive(Debug, Clone, Copy)]
+pub struct Lagged(pub usize);
+
+impl std::fmt::Display for Lagged {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Broadcast channel lagged by {}", self.0)
+    }
+}
+
+impl std::error::Error for Lagged {}
 
 #[async_trait::async_trait]
 pub trait BroadcastReceiverDyn<E>: 'static + Send + Sync
 where
     E: 'static + Clone,
 {
-    async fn recv(&mut self) -> Option<E>;
+    async fn recv(&mut self) -> Result<Option<E>, Lagged>;
 }
 
 #[async_trait::async_trait]
@@ -75,7 +90,7 @@ where
     E: 'static + Clone,
     T: BroadcastReceiver<E>,
 {
-    async fn recv(&mut self) -> Option<E> {
+    async fn recv(&mut self) -> Result<Option<E>, Lagged> {
         BroadcastReceiver::recv(self).await
     }
 }
@@ -111,8 +126,8 @@ pub mod impl_tokio {
         type Sender = BroadcastSenderTokio<E>;
         type Receiver = BroadcastReceiverTokio<E>;
 
-        fn chan(&self) -> (Self::Sender, Self::Receiver) {
-            let (sender, receiver) = broadcast::channel(1024);
+        fn chan_with_capacity(&self, capacity: usize) -> (Self::Sender, Self::Receiver) {
+            let (sender, receiver) = broadcast::channel(capacity);
             (
                 BroadcastSenderTokio { sender },
                 BroadcastReceiverTokio { receiver },
@@ -187,16 +202,14 @@ pub mod impl_tokio {
     where
         E: 'static + Clone + Send + Sync,
     {
-        async fn recv(&mut self) -> Option<E> {
+        async fn recv(&mut self) -> Result<Option<E>, Lagged> {
             let recv = self.receiver.recv();
             let res = recv.await;
             match res {
-                Ok(v) => Some(v),
+                Ok(v) => Ok(Some(v)),
                 Err(err) => match err {
-                    broadcast::error::RecvError::Closed => None,
-                    broadcast::error::RecvError::Lagged(count) => {
-                        panic!("Broadcast channel lagged by {}. This is a bug.", count);
-                    }
+                    broadcast::error::RecvError::Closed => Ok(None),
+                    broadcast::error::RecvError::Lagged(count) => Err(Lagged(count as usize)),
                 },
             }
         }

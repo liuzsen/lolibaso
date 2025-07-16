@@ -1,3 +1,5 @@
+use crate::channel::broadcast::Lagged;
+
 use super::{
     SendError,
     broadcast::{BroadcastReceiver, BroadcastReceiverDyn, BroadcastSender, BroadcastSenderDyn},
@@ -47,7 +49,9 @@ pub trait DuplexChanClient: Send + Sync + Sized + 'static + Clone {
 
     fn send(&self, msg: Self::Command) -> Result<(), Self::Error>;
 
-    fn receive(&mut self) -> impl Future<Output = Option<Self::Event>> + Send + Sync;
+    fn receive(
+        &mut self,
+    ) -> impl Future<Output = Result<Option<Self::Event>, Lagged>> + Send + Sync;
 
     fn split(
         self,
@@ -75,7 +79,7 @@ pub trait DuplexChanClientDyn {
 
     fn send(&self, msg: Self::Command) -> Result<(), Self::Error>;
 
-    async fn receive(&mut self) -> Option<Self::Event>;
+    async fn receive(&mut self) -> Result<Option<Self::Event>, Lagged>;
 
     fn split(
         self,
@@ -120,7 +124,7 @@ where
         DuplexChanClient::send(self, msg)
     }
 
-    async fn receive(&mut self) -> Option<Self::Event> {
+    async fn receive(&mut self) -> Result<Option<Self::Event>, Lagged> {
         DuplexChanClient::receive(self).await
     }
 
@@ -257,7 +261,7 @@ pub mod impl_tokio {
             self.sender.send(msg)
         }
 
-        async fn receive(&mut self) -> Option<Self::Event> {
+        async fn receive(&mut self) -> Result<Option<Self::Event>, Lagged> {
             BroadcastReceiver::recv(&mut self.receiver).await
         }
 
