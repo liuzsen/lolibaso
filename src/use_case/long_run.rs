@@ -8,6 +8,8 @@ pub trait GlobalTaskChanStorage<Id, Chan> {
     fn get_cloned(&self, task_id: Id) -> Option<Chan>
     where
         Chan: Clone;
+
+    fn delete(&self, task_id: Id);
 }
 
 pub mod default_impl {
@@ -99,6 +101,14 @@ pub mod default_impl {
                 Some(chan.cast_to_ref::<Chan>().clone())
             } else {
                 None
+            }
+        }
+
+        fn delete(&self, task_id: Id) {
+            let mut lock = self.map.write();
+            let task_map = lock.get_mut(&task_id.type_id());
+            if let Some(task_map) = task_map {
+                task_map.remove(&task_id.to_string());
             }
         }
     }
