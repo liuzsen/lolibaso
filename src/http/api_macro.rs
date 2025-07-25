@@ -115,3 +115,70 @@ macro_rules! actix_ws_api {
 
     };
 }
+
+pub trait QueryRouter {
+    type Adapter;
+}
+
+pub struct SimpleQueryResponse<T> {
+    pub body: T,
+}
+
+impl<T> crate::http::ApiResponse for SimpleQueryResponse<T> {
+    type Body = T;
+
+    fn headers(&self) -> Option<&http::HeaderMap<http::HeaderValue>> {
+        None
+    }
+
+    fn body(&self) -> &Self::Body {
+        &self.body
+    }
+
+    fn into_parts(self) -> (super::response::Head, Self::Body) {
+        (
+            super::response::Head {
+                status: self.status(),
+                version: self.version(),
+                headers: None,
+            },
+            self.body,
+        )
+    }
+}
+
+pub trait QueryProvider {
+    type Query;
+    type Response;
+
+    async fn query(
+        &self,
+        q: Self::Query,
+    ) -> crate::result::BizResult<Self::Response, super::error::BizError>;
+}
+
+#[macro_export]
+macro_rules! actix_query_api {
+    ($name:ident) => {
+        const _: () = {
+            use lolibaso::http::api_macro::QueryProvider;
+            use lolibaso::http::api_macro::QueryRouter;
+            use lolibaso::http::api_macro::SimpleQueryResponse;
+            use lolibaso::http::response::actix_impl::ToActixResponse;
+
+            impl $name {
+                pub async fn query(
+                    q: actix_web::web::Query<
+                        <<$name as QueryRouter>::Adapter as QueryProvider>::Query,
+                    >,
+                ) -> Result<actix_web::HttpResponse, lolibaso::http::error::HttpError> {
+                    let adapter = <$name as QueryRouter>::Adapter::provide()?;
+                    let resp = adapter.query(q.into_inner()).await??;
+                    let response = SimpleQueryResponse { body: resp };
+                    let response = ToActixResponse::to_actix_response(response);
+                    Ok(response)
+                }
+            }
+        };
+    };
+}
