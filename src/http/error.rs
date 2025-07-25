@@ -45,6 +45,12 @@ impl BizError {
 
     pub const InvalidQuery: Self =
         Self::new(StatusCode::BAD_REQUEST.as_u16(), 103, "Invalid query");
+
+    pub const QueryTagetNotFound: Self = Self::new(
+        StatusCode::NOT_FOUND.as_u16(),
+        104,
+        "Query target not found",
+    );
 }
 
 /// Convert u16 to http status code at compile time
